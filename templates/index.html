@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default.css">
+
+    <style>
+        body {
+            width: 100%;
+            height: 100%;
+        }
+
+        #app {
+            width: 100%;
+            height: 100%;
+        }
+
+        .md-app {
+            width: 100%;
+            height: 100%;
+        }
+
+        .message-subject {
+            font-weight: 500;
+            color: #000000cc;
+        }
+
+        .message-preview {
+            color: #000000b3;
+        }
+
+        .html-content {
+            
+        }
+        .md-dialog-container {
+            width: 100%;
+        }
+    </style>
+
+</head>
+
+<body>
+{% raw %}
+<div id="app">
+    <md-app>
+        <md-app-toolbar class="md-primary md-dense">
+            <h3 class="md-title" style="flex: 1">Messages ({{ messagesCount }})</h3>
+            <md-button @click="refresh">Refresh</md-button>
+        </md-app-toolbar>
+
+        <md-app-content>
+            <md-table v-model="messages" md-sort="date" md-sort-order="desc" md-fixed-header @md-selected="onSelect">
+                <md-table-empty-state
+                        md-label="No messages"
+                        :md-description="`There are no messages yet, try to send something to ${smtpHost}:${ this.smtpPort }`">
+                </md-table-empty-state>
+
+                <md-table-row slot="md-table-row" slot-scope="{ item }" md-selectable="single">
+                    <md-table-cell md-label="Name" md-sort-by="to">{{ item.to }}</md-table-cell>
+                    <md-table-cell md-label="Text" md-sort-by="subject">
+                        <span class="message-subject">{{ item.subject }}</span>
+                        <span class="message-preview">- {{ getBodyPreview(item) }}
+                            </span>
+                    </md-table-cell>
+                    <md-table-cell md-label="Job Title" md-sort-by="date">{{ item.date.format("HH:mm") }}
+                    </md-table-cell>
+                </md-table-row>
+            </md-table>
+        </md-app-content>
+
+    </md-app>
+
+    <md-dialog :md-active.sync="showSelected">
+        <md-dialog-title>Email content</md-dialog-title>
+        <md-dialog-content>
+
+            <md-tabs md-dynamic-height v-if="selected !== null">
+                <md-tab md-label="Html">
+                    <span class="md-body-2">{{ selected.subject }}</span>
+
+                    <div class="html-content">
+                        <span v-html="selected.html"></span>
+                    </div>
+                </md-tab>
+
+                <md-tab md-label="Text" v-if="selected !== null">
+                    <span class="md-body-2">{{ selected.subject }}</span>
+
+                    <pre>{{ selected.text }}</pre>
+                </md-tab>
+            </md-tabs>
+
+            <md-dialog-actions>
+                <md-button class="md-primary" @click="resetSelection">Close</md-button>
+            </md-dialog-actions>
+        </md-dialog-content>
+    </md-dialog>
+</div>
+{% endraw %}
+
+<script src="https://unpkg.com/moment"></script>
+<script src="https://unpkg.com/vue"></script>
+<script src="https://unpkg.com/vue-material"></script>
+<script>
+    var smtpHost = {{ smtp_host|tojson }};
+    var smtpPort = {{ smtp_port|tojson }};
+    var messages = {{ messages|tojson }};
+
+    Vue.use(VueMaterial.default);
+
+    new Vue({
+        el: '#app',
+        data: function () {
+            return {
+                messages: [],
+                smtpHost: window.smtpHost,
+                smtpPort: window.smtpPort,
+                selected: null,
+                showSelected: false
+            }
+        },
+        methods: {
+            loadMessages() {
+                var that = this;
+
+                fetch('/messages').then(function (response) {
+                    var contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        return response.json();
+                    }
+                    throw new TypeError("Invalid response:" + response);
+                })
+                    .then(function (json) {
+                        that.messages = that.transformLoadedMessages(json);
+                    })
+                    .catch(function (error) {
+                        console.log(error);
+                    });
+            },
+            refresh() {
+                this.loadMessages();
+            },
+            getBodyPreview(item) {
+                return item.clean_text.slice(0, 130) + '...';
+            },
+            onSelect(item) {
+                if (!item) {
+                    return
+                }
+
+                this.selected = Object.assign({}, item);
+                this.showSelected = true;
+            },
+            resetSelection() {
+                this.selected = null;
+                this.showSelected = false;
+            },
+            transformLoadedMessages(messages) {
+                var results = [];
+                for (var i = 0; i < messages.length; i++) {
+                    var item = messages[i];
+                    item.date = moment.utc(item.date);
+                    results.push(item)
+                }
+                return results;
+            }
+        },
+        computed: {
+            messagesCount() {
+                return this.messages.length;
+            }
+        },
+        mounted() {
+            // this.refresh();
+            this.messages = this.transformLoadedMessages(window.messages);
+            setInterval(function () {
+                this.refresh()
+            }.bind(this), 3000);
+        }
+    })
+</script>
+</body>
+</html>
