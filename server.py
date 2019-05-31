@@ -1,6 +1,9 @@
 import asyncio
+import datetime as dt
 import os
+import weakref
 from dataclasses import dataclass
+from email.utils import format_datetime
 from mailbox import Maildir
 from operator import itemgetter
 from tempfile import TemporaryDirectory
@@ -14,6 +17,8 @@ from aiohttp import web
 from aiosmtpd.controller import Controller
 from aiosmtpd.handlers import Mailbox
 from mailparser import mailparser
+
+from send import send_smtp
 
 
 @dataclass
@@ -34,8 +39,8 @@ class MessageSchema(ma.Schema):
 
     @ma.pre_dump
     def pre_dump(self, obj):
-        html = obj.text_html[0]
-        text = obj.text_plain[0]
+        html = obj.text_html[0] if obj.text_html else ""
+        text = obj.text_plain[0] if obj.text_plain else ""
         clean_text = bleach.clean(
             text=html or text,
             tags=[],
@@ -55,6 +60,11 @@ class MessageSchema(ma.Schema):
         }
 
 
+class WSMessage(ma.Schema):
+    type = ma.fields.String()
+    data = ma.fields.Nested(MessageSchema())
+
+
 class WebServer:
     def __init__(self, config: Configuration, maildir):
         self.config = config
@@ -65,15 +75,17 @@ class WebServer:
             web.get("/", self.view_index),
             web.get("/messages", self.view_messages_json),
             web.get("/ws", self.websocket_handler),
+            web.get("/send-test-email", self.send_test_email),
         ]
         self.app.add_routes(routes)
+        self._websockets = weakref.WeakSet()
 
     def start(self):
         # fixme: use loop
         web.run_app(self.app, host=self.config.web_host, port=self.config.web_port)
 
     def _get_messages(self):
-        messages = sorted(self.maildir, key=itemgetter("message-id"))
+        messages = sorted(self.maildir, key=itemgetter("date"), reverse=True)
 
         items = []
         for message in messages:
@@ -107,18 +119,38 @@ class WebServer:
         ws = web.WebSocketResponse()
         await ws.prepare(request)
 
-        async for msg in ws:
-            if msg.type == aiohttp.WSMsgType.TEXT:
-                if msg.data == "close":
-                    await ws.close()
-                else:
-                    await ws.send_str(msg.data + "/answer")
-            elif msg.type == aiohttp.WSMsgType.ERROR:
-                print("ws connection closed with exception %s" % ws.exception())
+        self._websockets.add(ws)
+        print("added websocket")
+
+        try:
+            async for msg in ws:
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    if msg.data == "close":
+                        await ws.close()
+                    else:
+                        await ws.send_str(msg.data + "/answer")
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    print("ws connection closed with exception %s" % ws.exception())
+        finally:
+            self._websockets.discard(ws)
 
         print("websocket connection closed")
 
         return ws
+
+    def on_message(self, message):
+        for ws in self._websockets:
+            mail = mailparser.parse_from_string(message.as_string())
+            schema = WSMessage()
+            msg = {"type": "message", "data": mail}
+
+            asyncio.run_coroutine_threadsafe(
+                ws.send_str(schema.dumps(msg)), asyncio.get_running_loop()
+            )
+
+    def send_test_email(self, request):
+        send_smtp(self.config.smtp_host, self.config.smtp_port)
+        return web.json_response()
 
 
 if __name__ == "__main__":
@@ -133,10 +165,22 @@ if __name__ == "__main__":
         loop = asyncio.new_event_loop()
 
         class MailboxHandler(Mailbox):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self.observers = set()
+
             def handle_message(self, message):
+                if message["Date"] is None:
+                    message["Date"] = format_datetime(dt.datetime.now())
                 super().handle_message(message)
-                # TODO: notify observer of new message
-                #   and subscribe in websocket
+                self.notify_observers(message)
+
+            def register(self, observer):
+                self.observers.add(observer)
+
+            def notify_observers(self, message):
+                for observer in self.observers:
+                    observer.on_message(message)
 
         maildir_path = os.path.join(dir, "maildir")
         maildir = Maildir(maildir_path)
@@ -145,9 +189,10 @@ if __name__ == "__main__":
         controller = Controller(
             mailbox, loop=loop, hostname=config.smtp_host, port=config.smtp_port
         )
-        controller.start()
 
         web_server = WebServer(config, maildir)
-        web_server.start()
+        mailbox.register(web_server)
 
+        controller.start()
+        web_server.start()
         controller.stop()

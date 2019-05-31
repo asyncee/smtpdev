@@ -34,8 +34,9 @@
         }
 
         .html-content {
-            
+
         }
+
         .md-dialog-container {
             width: 100%;
         }
@@ -49,24 +50,25 @@
     <md-app>
         <md-app-toolbar class="md-primary md-dense">
             <h3 class="md-title" style="flex: 1">Messages ({{ messagesCount }})</h3>
+            <md-button @click="sendTestEmail">Send test email</md-button>
             <md-button @click="refresh">Refresh</md-button>
         </md-app-toolbar>
 
         <md-app-content>
-            <md-table v-model="messages" md-sort="date" md-sort-order="desc" md-fixed-header @md-selected="onSelect">
+            <md-table v-model="messages" @md-selected="onSelect">
                 <md-table-empty-state
                         md-label="No messages"
                         :md-description="`There are no messages yet, try to send something to ${smtpHost}:${ this.smtpPort }`">
                 </md-table-empty-state>
 
                 <md-table-row slot="md-table-row" slot-scope="{ item }" md-selectable="single">
-                    <md-table-cell md-label="Name" md-sort-by="to">{{ item.to }}</md-table-cell>
-                    <md-table-cell md-label="Text" md-sort-by="subject">
+                    <md-table-cell md-label="Recipient">{{ item.to }}</md-table-cell>
+                    <md-table-cell md-label="Message">
                         <span class="message-subject">{{ item.subject }}</span>
                         <span class="message-preview">- {{ getBodyPreview(item) }}
                             </span>
                     </md-table-cell>
-                    <md-table-cell md-label="Job Title" md-sort-by="date">{{ item.date.format("HH:mm") }}
+                    <md-table-cell md-label="Date">{{ item.date.format("HH:mm") }}
                     </md-table-cell>
                 </md-table-row>
             </md-table>
@@ -120,7 +122,7 @@
                 smtpHost: window.smtpHost,
                 smtpPort: window.smtpPort,
                 selected: null,
-                showSelected: false
+                showSelected: false,
             }
         },
         methods: {
@@ -144,6 +146,10 @@
             refresh() {
                 this.loadMessages();
             },
+            sendTestEmail() {
+                // get :)
+                fetch('/send-test-email')
+            },
             getBodyPreview(item) {
                 return item.clean_text.slice(0, 130) + '...';
             },
@@ -159,15 +165,18 @@
                 this.selected = null;
                 this.showSelected = false;
             },
+            transformLoadedMessage(message) {
+                message.date = moment.utc(message.date);
+                return message;
+            },
             transformLoadedMessages(messages) {
                 var results = [];
                 for (var i = 0; i < messages.length; i++) {
                     var item = messages[i];
-                    item.date = moment.utc(item.date);
-                    results.push(item)
+                    results.push(this.transformLoadedMessage(item))
                 }
                 return results;
-            }
+            },
         },
         computed: {
             messagesCount() {
@@ -175,11 +184,40 @@
             }
         },
         mounted() {
+            that = this;
             // this.refresh();
             this.messages = this.transformLoadedMessages(window.messages);
+
+            /*
             setInterval(function () {
                 this.refresh()
             }.bind(this), 3000);
+            */
+
+            var socket = new WebSocket("ws://" + window.location.host + "/ws");
+            socket.onopen = function () {
+                console.log("Соединение установлено.");
+            };
+
+            socket.onclose = function (event) {
+                if (event.wasClean) {
+                    console.log('Соединение закрыто чисто');
+                } else {
+                    console.log('Обрыв соединения'); // например, "убит" процесс сервера
+                }
+                console.log('Код: ' + event.code + ' причина: ' + event.reason);
+            };
+
+            socket.onmessage = function (event) {
+                var payload = JSON.parse(event.data);
+                if (payload.type === 'message') {
+                    that.messages.unshift(that.transformLoadedMessage(payload.data))
+                }
+            };
+
+            socket.onerror = function (error) {
+                console.log("Ошибка " + error.message);
+            };
         }
     })
 </script>
