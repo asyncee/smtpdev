@@ -1,7 +1,10 @@
 bootstrap:
 	rm -rf ./env
 	virtualenv -p python3 env
-	env/bin/pip install -e .
+	env/bin/pip install -r requirements-dev.txt
 
 run:
-	python server.py
+	smtpdev --develop
+
+check:
+	mypy smtpdev --ignore-missing-imports
