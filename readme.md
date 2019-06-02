@@ -4,22 +4,12 @@ Asynchronous SMTP server for developers.
 
 Currently this project is a work in progress.
 
-## Installation for local development
+## Installation
+
+Just use pip:
 
 ```bash
-make bootstrap
-```
-
-## Running mypy
-
-```bash
-make check
-```
-
-## Launching smtpdev
-
-```bash
-make run
+pip install smtpdev
 ```
 
 ## Command line options description
@@ -37,4 +27,27 @@ Options:
   --debug              Whether to use debug loglevel.
   --maildir TEXT       Full path to emails directory, temporary directory if not set.
   --help               Show this message and exit.
+```
+
+## Development
+
+### Installation
+
+Clone repository and use following command to bootstrap
+python environment and install package in editable mode.
+
+```bash
+make bootstrap
+```
+
+### Launching smtpdev
+
+```bash
+make run
+```
+
+### Running mypy
+
+```bash
+make check
 ```
