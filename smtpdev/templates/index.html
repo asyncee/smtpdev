@@ -50,7 +50,7 @@
     <md-app>
         <md-app-toolbar class="md-primary md-dense">
             <h3 class="md-title" style="flex: 1">Messages ({{ messagesCount }})</h3>
-            <md-button @click="sendTestEmail">Send test email</md-button>
+            <md-button @click="sendTestEmail" v-if="isDeveloperMode">Send test email</md-button>
             <md-button @click="refresh">Refresh</md-button>
         </md-app-toolbar>
 
@@ -111,6 +111,7 @@
     var smtpHost = {{ smtp_host|tojson }};
     var smtpPort = {{ smtp_port|tojson }};
     var messages = {{ messages|tojson }};
+    var develop = {{ develop|tojson }};
 
     Vue.use(VueMaterial.default);
 
@@ -123,6 +124,7 @@
                 smtpPort: window.smtpPort,
                 selected: null,
                 showSelected: false,
+                isDeveloperMode: window.develop,
             }
         },
         methods: {
