@@ -15,22 +15,24 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option("--smtp-host", default="localhost")
-@click.option("--smtp-port", default=2500)
-@click.option("--web-host", default="localhost")
-@click.option("--web-port", default=8080)
-@click.option("--develop", default=False, is_flag=True)
-@click.option("--debug", default=False, is_flag=True)
-@click.option("--maildir", default=None)
+@click.option("--smtp-host", default="localhost", help="Smtp server host.")
+@click.option("--smtp-port", default=2500, help="Smtp server port.")
+@click.option("--web-host", default="localhost", help="Web server host.")
+@click.option("--web-port", default=8080, help="Web server port.")
+@click.option("--develop", default=False, is_flag=True, help="Run in developer mode.")
+@click.option("--debug", default=False, is_flag=True, help="Whether to use debug loglevel.")
+@click.option("--maildir", default=None, help="Full path to emails directory, temporary directory if not set.")
 def main(smtp_host, smtp_port, web_host, web_port, develop, debug, maildir):
-    logging.basicConfig(level=logging.DEBUG)
+    if debug:
+        logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     logger.info("SMTP server is running on %s:%s", smtp_host, smtp_port)
     logger.info("Web server is running on %s:%s", web_host, web_port)
 
     if develop:
         logger.info("Running in developer mode")
-        debug = True
 
     dir_context = TemporaryDirectory if maildir is None else lambda: nullcontext(maildir)
 
