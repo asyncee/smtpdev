@@ -8,7 +8,7 @@ import click
 from aiosmtpd.controller import Controller
 
 from .config import Configuration
-from .handlers import MailboxHandler
+from .smtp_handlers import MailboxHandler
 from .web_server import WebServer
 
 logger = logging.getLogger(__name__)

@@ -4,72 +4,25 @@ import weakref
 from mailbox import Maildir
 from mailbox import MaildirMessage
 from operator import itemgetter
-from typing import Dict
 from typing import List
-from typing import Union
+from typing import MutableSet
 
 import aiohttp
 import aiohttp_jinja2
-import bleach
 import jinja2
-import marshmallow as ma
 from aiohttp import web
-from mailparser import MailParser
-from mailparser import mailparser
 
-from .config import Configuration
-from .message_observer import MessageObserver
-from .utils import send_test_email
-
-
-class UiMessageSchema(ma.Schema):
-    """Schema to serialize MailParser object."""
-
-    to = ma.fields.String()
-    subject = ma.fields.String()
-    html = ma.fields.String()
-    text = ma.fields.String()
-    clean_text = ma.fields.String()
-    date = ma.fields.DateTime()
-
-    @ma.pre_dump
-    def pre_dump(self, obj: MailParser):
-        html = obj.text_html[0] if obj.text_html else ""
-        text = obj.text_plain[0] if obj.text_plain else ""
-        clean_text = bleach.clean(
-            text=html or text,
-            tags=[],
-            attributes={},
-            styles=[],
-            protocols=[],
-            strip=True,
-            strip_comments=True,
-        )
-        return {
-            "to": ", ".join([f" ".join([i for i in x if i]) for x in obj.to]),
-            "subject": obj.subject,
-            "html": html,
-            "text": text,
-            "clean_text": clean_text,
-            "date": obj.date,
-        }
-
-
-def serialize_email(email: MailParser, as_json=False) -> Union[Dict, str]:
-    schema = UiMessageSchema()
-    dump_method = schema.dumps if as_json else schema.dump
-    return dump_method(email)
-
-
-def parse_message(message: MaildirMessage) -> MailParser:
-    return mailparser.parse_from_string(message.as_string())
+from .mailparser_util import MailParserUtil
+from ..config import Configuration
+from ..message_observer import MessageObserver
+from ..utils.smtp import send_test_email
 
 
 class WebServer(MessageObserver):
     def __init__(self, config: Configuration, maildir: Maildir):
         self._config = config
         self._maildir = maildir
-        self._websockets = weakref.WeakSet()
+        self._websockets: MutableSet[web.WebSocketResponse] = weakref.WeakSet()
         self._app = self._configure_webapp()
         self._logger = logging.getLogger(self.__class__.__name__)
 
@@ -116,11 +69,9 @@ class WebServer(MessageObserver):
 
     def on_message(self, message: MaildirMessage):
         for ws in self._websockets:
-            mail = parse_message(message)
-
-            asyncio.run_coroutine_threadsafe(
-                ws.send_str(serialize_email(mail, as_json=True)), asyncio.get_running_loop()
-            )
+            mail = MailParserUtil.parse_message(message)
+            coro = ws.send_str(MailParserUtil.to_json(mail))
+            asyncio.run_coroutine_threadsafe(coro, asyncio.get_running_loop())
 
     def _configure_webapp(self):
         app = web.Application()
@@ -139,7 +90,7 @@ class WebServer(MessageObserver):
 
         items = []
         for message in messages:
-            items.append(parse_message(message))
+            items.append(MailParserUtil.parse_message(message))
 
         return items
 
@@ -147,5 +98,5 @@ class WebServer(MessageObserver):
         messages = self._get_messages()
         response = []
         for message in messages:
-            response.append(serialize_email(message))
+            response.append(MailParserUtil.to_dict(message))
         return response
