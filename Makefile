@@ -8,3 +8,8 @@ run:
 
 check:
 	mypy smtpdev --ignore-missing-imports
+
+upload:
+	rm -rf ./dist/*
+	python setup.py sdist
+	twine upload dist/*
