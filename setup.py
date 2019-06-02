@@ -4,7 +4,13 @@ from setuptools import find_packages
 from setuptools import setup
 
 here = os.path.abspath(os.path.dirname(__file__))
-long_description = open(os.path.join(here, "readme.md")).read()
+description = "Asynchronous SMTP server for local development and email testing"
+github_homepage = "https://github.com/asyncee/smtpdev"
+long_description = f"""
+{description}
+
+See source code and documentation on {github_homepage}.
+"""
 requirements = open(os.path.join(here, "requirements.txt")).readlines()
 
 
@@ -28,14 +34,14 @@ for dirpath, dirnames, filenames in os.walk("smtpdev"):
 
 setup(
     name="smtpdev",
-    version="0.1",
+    version="0.1.2",
     packages=find_packages(),
     author="asyncee",
-    description="Asynchronous SMTP server for local development and email testing",
+    description=description,
     long_description=long_description,
     license="MIT",
     keywords="smtp developer server",
-    url="https://github.com/asyncee/smtpdev",
+    url=github_homepage,
     download_url="https://pypi.python.org/pypi/smtpdev/",
     classifiers=[
         "Development Status :: 5 - Production/Stable",
