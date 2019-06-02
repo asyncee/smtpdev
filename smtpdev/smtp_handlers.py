@@ -8,7 +8,7 @@ from .message_observer import MessageObservable
 
 
 class MailboxHandler(Mailbox):
-    def __init__(self, mail_dir, message_class=None):
+    def __init__(self, mail_dir: str, message_class=None):
         super().__init__(mail_dir, message_class)
         self._observable = MessageObservable()
 

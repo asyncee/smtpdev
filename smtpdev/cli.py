@@ -32,9 +32,12 @@ def main(smtp_host, smtp_port, web_host, web_port, develop, debug, maildir):
         logger.info("Running in developer mode")
         debug = True
 
-    dir_context = TemporaryDirectory() if maildir is None else nullcontext(maildir)
+    dir_context = TemporaryDirectory if maildir is None else lambda: nullcontext(maildir)
 
-    with dir_context as maildir_path:
+    with dir_context() as maildir_path:
+        maildir_path = pathlib.Path(maildir_path)
+        maildir_path.mkdir(parents=True, exist_ok=True)
+
         logger.info("Mail directory: %s", maildir_path)
 
         config = Configuration(
@@ -46,9 +49,8 @@ def main(smtp_host, smtp_port, web_host, web_port, develop, debug, maildir):
             debug=debug,
         )
 
-        pathlib.Path(maildir_path).mkdir(parents=True, exist_ok=True)
-        maildir = Maildir(maildir_path)
-        mailbox = MailboxHandler(maildir_path)
+        maildir = Maildir(maildir_path / "maildir")
+        mailbox = MailboxHandler(maildir_path / "maildir")
 
         controller = Controller(mailbox, hostname=config.smtp_host, port=config.smtp_port)
         web_server = WebServer(config, maildir)
