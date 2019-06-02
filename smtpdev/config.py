@@ -7,3 +7,5 @@ class Configuration:
     smtp_port: int
     web_host: str
     web_port: int
+    develop: bool
+    debug: bool
