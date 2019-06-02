@@ -5,8 +5,8 @@
     <meta content="width=device-width,initial-scale=1,minimal-ui" name="viewport">
     <link rel="stylesheet"
           href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700,400italic|Material+Icons">
-    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/vue-material.min.css">
-    <link rel="stylesheet" href="https://unpkg.com/vue-material/dist/theme/default.css">
+    <link rel="stylesheet" href="/static/vue-material/vue-material.min.css">
+    <link rel="stylesheet" href="/static/vue-material/theme/default.css">
 
     <style>
         body {
@@ -104,9 +104,9 @@
 </div>
 {% endraw %}
 
-<script src="https://unpkg.com/moment"></script>
-<script src="https://unpkg.com/vue"></script>
-<script src="https://unpkg.com/vue-material"></script>
+<script src="/static/moment/moment-with-locales.min.js"></script>
+<script src="/static/vue/vue.min.js"></script>
+<script src="/static/vue-material/vue-material.min.js"></script>
 <script>
     var smtpHost = {{ smtp_host|tojson }};
     var smtpPort = {{ smtp_port|tojson }};
@@ -187,27 +187,11 @@
         },
         mounted() {
             that = this;
-            // this.refresh();
             this.messages = this.transformLoadedMessages(window.messages);
 
-            /*
-            setInterval(function () {
-                this.refresh()
-            }.bind(this), 3000);
-            */
-
             var socket = new WebSocket("ws://" + window.location.host + "/ws");
-            socket.onopen = function () {
-                console.log("Соединение установлено.");
-            };
-
             socket.onclose = function (event) {
-                if (event.wasClean) {
-                    console.log('Соединение закрыто чисто');
-                } else {
-                    console.log('Обрыв соединения'); // например, "убит" процесс сервера
-                }
-                console.log('Код: ' + event.code + ' причина: ' + event.reason);
+                console.log('Websocket connection closed: code: ' + event.code + ' reason: ' + event.reason);
             };
 
             socket.onmessage = function (event) {
@@ -216,7 +200,7 @@
             };
 
             socket.onerror = function (error) {
-                console.log("Ошибка " + error.message);
+                console.error("Websocket error: " + error.message);
             };
         }
     })

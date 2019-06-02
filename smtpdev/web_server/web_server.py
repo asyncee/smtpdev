@@ -1,9 +1,11 @@
 import asyncio
+import inspect
 import logging
 import weakref
 from mailbox import Maildir
 from mailbox import MaildirMessage
 from operator import itemgetter
+from pathlib import Path
 from typing import List
 from typing import MutableSet
 
@@ -12,6 +14,7 @@ import aiohttp_jinja2
 import jinja2
 from aiohttp import web
 
+import smtpdev
 from .mailparser_util import MailParserUtil
 from ..config import Configuration
 from ..message_observer import MessageObserver
@@ -74,6 +77,9 @@ class WebServer(MessageObserver):
             asyncio.run_coroutine_threadsafe(coro, asyncio.get_running_loop())
 
     def _configure_webapp(self):
+
+        static_path = Path(inspect.getfile(smtpdev)).parent / "static"
+
         app = web.Application()
         aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("smtpdev"))
         routes = [
@@ -81,6 +87,7 @@ class WebServer(MessageObserver):
             web.get("/messages", self.view_messages_json),
             web.get("/ws", self.websocket_handler),
             web.get("/send-test-email", self.send_test_email),
+            web.static("/static", static_path),
         ]
         app.add_routes(routes)
         return app
