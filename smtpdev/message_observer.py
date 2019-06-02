@@ -1,6 +1,7 @@
 import abc
 import weakref
 from mailbox import MaildirMessage
+from typing import MutableSet
 
 
 class MessageObserver(metaclass=abc.ABCMeta):
@@ -11,7 +12,7 @@ class MessageObserver(metaclass=abc.ABCMeta):
 
 class MessageObservable:
     def __init__(self) -> None:
-        self._observers = weakref.WeakSet()
+        self._observers: MutableSet[MessageObserver] = weakref.WeakSet()
 
     def register(self, observer: MessageObserver):
         self._observers.add(observer)
