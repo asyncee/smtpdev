@@ -2,8 +2,6 @@
 
 Asynchronous SMTP server for developers.
 
-Currently this project is a work in progress.
-
 ## Installation
 
 Just use pip:
@@ -11,6 +9,10 @@ Just use pip:
 ```bash
 pip install smtpdev
 ```
+
+## Launching
+
+You can launch smtpdev by issuing `smtpdev` command. All parameters has pre-set defaults.
 
 ## Command line options description
 
