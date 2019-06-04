@@ -12,7 +12,7 @@ pip install smtpdev
 
 ## Launching
 
-You can launch smtpdev by issuing `smtpdev` command. All parameters has pre-set defaults.
+You can launch smtpdev by issuing `smtpdev` command. All parameters have pre-set defaults.
 
 ## Command line options description
 
