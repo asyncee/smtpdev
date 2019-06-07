@@ -15,13 +15,44 @@ logger = logging.getLogger(__name__)
 
 
 @click.command()
-@click.option("--smtp-host", default="localhost", help="Smtp server host.")
-@click.option("--smtp-port", default=2500, help="Smtp server port.")
-@click.option("--web-host", default="localhost", help="Web server host.")
-@click.option("--web-port", default=8080, help="Web server port.")
-@click.option("--develop", default=False, is_flag=True, help="Run in developer mode.")
-@click.option("--debug", default=False, is_flag=True, help="Whether to use debug loglevel.")
-@click.option("--maildir", default=None, help="Full path to emails directory, temporary directory if not set.")
+@click.option(
+    "--smtp-host",
+    envvar="SMTPDEV_SMTP_HOST",
+    default="localhost",
+    help="Smtp server host (default localhost).",
+)
+@click.option(
+    "--smtp-port", envvar="SMTPDEV_SMTP_PORT", default=2500, help="Smtp server port (default 2500)."
+)
+@click.option(
+    "--web-host",
+    envvar="SMTPDEV_WEB_HOST",
+    default="localhost",
+    help="Web server host (default localhost).",
+)
+@click.option(
+    "--web-port", envvar="SMTPDEV_WEB_PORT", default=8080, help="Web server port (default 8080)."
+)
+@click.option(
+    "--develop",
+    envvar="SMTPDEV_DEVELOP",
+    default=False,
+    is_flag=True,
+    help="Run in developer mode.",
+)
+@click.option(
+    "--debug",
+    envvar="SMTPDEV_DEBUG",
+    default=False,
+    is_flag=True,
+    help="Whether to use debug loglevel.",
+)
+@click.option(
+    "--maildir",
+    envvar="SMTPDEV_MAILDIR",
+    default=None,
+    help="Full path to emails directory, temporary directory if not set.",
+)
 def main(smtp_host, smtp_port, web_host, web_port, develop, debug, maildir):
     if debug:
         logging.basicConfig(level=logging.DEBUG)
