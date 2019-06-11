@@ -34,7 +34,7 @@ for dirpath, dirnames, filenames in os.walk("smtpdev"):
 
 setup(
     name="smtpdev",
-    version="0.1.2",
+    version="0.1.3",
     packages=find_packages(),
     author="asyncee",
     description=description,
