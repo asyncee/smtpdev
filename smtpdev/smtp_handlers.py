@@ -18,5 +18,5 @@ class MailboxHandler(Mailbox):
     def handle_message(self, message):
         if message["Date"] is None:
             message["Date"] = format_datetime(dt.datetime.now())
-        super().handle_message(message)
+        message_id = self.mailbox.add(message)
         self._observable.notify_observers(message)

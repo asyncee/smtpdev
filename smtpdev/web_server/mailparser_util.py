@@ -1,21 +1,28 @@
 from mailbox import MaildirMessage
+from typing import Collection
+from typing import Type
 
+import marshmallow as ma
 from mailparser import MailParser
 from mailparser import mailparser
 
-from .ui_message_schema import UiMessageSchema
-
 
 class MailParserUtil:
-    schema = UiMessageSchema()
+    @classmethod
+    def to_dict(cls, email: MailParser, schema: Type[ma.Schema]) -> dict:
+        return schema().dump(email)
 
     @classmethod
-    def to_dict(cls, email: MailParser) -> dict:
-        return cls.schema.dump(email)
+    def to_json(cls, email: MailParser, schema: Type[ma.Schema]) -> str:
+        return schema().dumps(email)
 
     @classmethod
-    def to_json(cls, email: MailParser) -> str:
-        return cls.schema.dumps(email)
+    def to_dict_many(cls, emails: Collection[MailParser], schema: Type[ma.Schema]) -> dict:
+        return schema(many=True).dump(emails)
+
+    @classmethod
+    def to_json_many(cls, emails: Collection[MailParser], schema: Type[ma.Schema]) -> str:
+        return schema(many=True).dumps(emails)
 
     @classmethod
     def parse_message(cls, message: MaildirMessage) -> MailParser:
