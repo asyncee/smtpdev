@@ -4,21 +4,20 @@ import logging
 import weakref
 from mailbox import Maildir
 from mailbox import MaildirMessage
-from operator import itemgetter
 from pathlib import Path
-from typing import List
 from typing import MutableSet
 
 import aiohttp
 import aiohttp_jinja2
 import jinja2
 from aiohttp import web
+from mailparser import MailParser
 
 import smtpdev
+from . import schemas
 from .mailparser_util import MailParserUtil
 from ..config import Configuration
 from ..message_observer import MessageObserver
-from ..utils.smtp import send_test_email
 
 
 class WebServer(MessageObserver):
@@ -32,18 +31,27 @@ class WebServer(MessageObserver):
     def start(self):
         web.run_app(self._app, host=self._config.web_host, port=self._config.web_port)
 
-    async def view_messages_json(self, request):
-        return web.json_response(self._get_messages_json())
-
     @aiohttp_jinja2.template("index.html")
-    async def view_index(self, request):
-        messages = self._get_messages_json()
+    async def page_index(self, request):
         return {
             "smtp_host": self._config.smtp_host,
             "smtp_port": self._config.smtp_port,
-            "messages": messages,
             "develop": self._config.develop,
+            "messages": MailParserUtil.to_json_many(self._get_messages(), schemas.MessageSchema),
         }
+
+    async def message_details(self, request):
+        message_id = request.query.get("message-id")
+        message = self._get_message(message_id)
+        if not message:
+            return web.json_response(
+                {"status": "error", "message": "message not found"}, status=404
+            )
+        return web.json_response(MailParserUtil.to_dict(message, schemas.FullMessageSchema))
+
+    async def list_all_messages(self, request):
+        messages = self._get_messages()
+        return web.json_response(MailParserUtil.to_dict_many(messages, schemas.MessageSchema))
 
     async def websocket_handler(self, request):
 
@@ -66,44 +74,36 @@ class WebServer(MessageObserver):
 
         return ws
 
-    async def send_test_email(self, request):
-        send_test_email(self._config.smtp_host, self._config.smtp_port)
-        return web.Response()
-
     def on_message(self, message: MaildirMessage):
         for ws in self._websockets:
-            mail = MailParserUtil.parse_message(message)
-            coro = ws.send_str(MailParserUtil.to_json(mail))
+            mail = self._parse_message(message)
+            coro = ws.send_str(MailParserUtil.to_json(mail, schemas.MessageSchema))
             asyncio.run_coroutine_threadsafe(coro, asyncio.get_running_loop())
 
     def _configure_webapp(self):
-
         static_path = Path(inspect.getfile(smtpdev)).parent / "static"
 
         app = web.Application()
         aiohttp_jinja2.setup(app, loader=jinja2.PackageLoader("smtpdev"))
         routes = [
-            web.get("/", self.view_index),
-            web.get("/messages", self.view_messages_json),
+            web.get("/", self.page_index),
+            web.get("/message", self.message_details),
+            web.get("/messages", self.list_all_messages),
             web.get("/ws", self.websocket_handler),
-            web.get("/send-test-email", self.send_test_email),
             web.static("/static", static_path),
         ]
         app.add_routes(routes)
         return app
 
     def _get_messages(self):
-        messages: List[MaildirMessage] = sorted(self._maildir, key=itemgetter("date"), reverse=True)
-
         items = []
-        for message in messages:
-            items.append(MailParserUtil.parse_message(message))
+        for message_id, message in self._maildir.items():
+            items.append(self._parse_message(message))
 
         return items
 
-    def _get_messages_json(self):
-        messages = self._get_messages()
-        response = []
-        for message in messages:
-            response.append(MailParserUtil.to_dict(message))
-        return response
+    def _get_message(self, message_id: str):
+        return self._parse_message(self._maildir.get(message_id))
+
+    def _parse_message(self, message: MaildirMessage) -> MailParser:
+        return MailParserUtil.parse_message(message)

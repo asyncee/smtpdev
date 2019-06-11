@@ -24,21 +24,37 @@
             height: 100%;
         }
 
-        .message-subject {
-            font-weight: 500;
-            color: #000000cc;
+        .sender {
+            display: flex;
+            flex-direction: row;
+            justify-content: space-between;
         }
 
-        .message-preview {
-            color: #000000b3;
+        .sender__name {
+            flex: 1;
         }
 
-        .html-content {
-
+        .sender__date {
+            width: auto;
         }
 
-        .md-dialog-container {
+        .md-tab {
+            overflow: scroll !important;
+        }
+
+        .md-tabs-navigation {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .md-drawer {
             width: 100%;
+            max-width: 100%;
+        }
+
+        @media (min-width: 601px) {
+            .md-drawer {
+                width: 400px;
+            }
         }
     </style>
 
@@ -47,60 +63,84 @@
 <body>
 {% raw %}
 <div id="app">
-    <md-app>
-        <md-app-toolbar class="md-primary md-dense">
-            <h3 class="md-title" style="flex: 1">Messages ({{ messagesCount }})</h3>
-            <md-button @click="sendTestEmail" v-if="isDeveloperMode">Send test email</md-button>
-            <md-button @click="refresh">Refresh</md-button>
+    <md-app md-scrollbar="false">
+        <md-app-toolbar class="md-primary md-dense" md-elevation="4">
+            <md-button class="md-icon-button" @click="toggleMenu" v-if="!menuVisible">
+                <md-icon>menu</md-icon>
+            </md-button>
+            <div class="md-toolbar-section-start">
+                <h3 class="md-title" v-if="selected">{{ selected.subject }}</h3>
+            </div>
+            <div class="md-toolbar-section-end">
+                <md-button @click="refresh">Refresh</md-button>
+            </div>
         </md-app-toolbar>
 
-        <md-app-content>
-            <md-table v-model="messages" @md-selected="onSelect">
-                <md-table-empty-state
-                        md-label="No messages"
-                        :md-description="`There are no messages yet, try to send something to ${smtpHost}:${ this.smtpPort }`">
-                </md-table-empty-state>
+        <md-app-drawer :md-active.sync="menuVisible" md-persistent="full" v-if="hasMessages">
+            <md-toolbar class="md-transparent md-dense" md-elevation="0">
+                <span class="md-subheading">
+                    Messages ({{ messagesCount }})
+                </span>
+                <div class="md-toolbar-section-end" v-if="!isDesktop()">
+                    <md-button class="md-icon-button md-dense" @click="toggleMenu">
+                        <md-icon>keyboard_arrow_left</md-icon>
+                    </md-button>
+                </div>
+            </md-toolbar>
 
-                <md-table-row slot="md-table-row" slot-scope="{ item }" md-selectable="single">
-                    <md-table-cell md-label="Recipient">{{ item.to }}</md-table-cell>
-                    <md-table-cell md-label="Message">
-                        <span class="message-subject">{{ item.subject }}</span>
-                        <span class="message-preview">- {{ getBodyPreview(item) }}
-                            </span>
-                    </md-table-cell>
-                    <md-table-cell md-label="Date">{{ item.date.format("HH:mm") }}
-                    </md-table-cell>
-                </md-table-row>
-            </md-table>
+            <md-list class="md-double-line md-dense message-list">
+                <template v-for="message in messages">
+                    <md-list-item @click="onSelect(message)">
+                        <div class="md-list-item-text">
+                            <div class="sender">
+                                <span class="sender__name">{{ message.to }}</span>
+                                <span class="sender__date md-caption">{{ message.date.format("HH:mm") }}</span>
+                            </div>
+                            <span>{{ message.subject }}</span>
+                        </div>
+                    </md-list-item>
+                    <md-divider></md-divider>
+                </template>
+            </md-list>
+        </md-app-drawer>
+
+        <md-app-content>
+            <template v-if="!hasMessages">
+                <template v-if="loading">
+                    <md-empty-state
+                            md-label="Loading messages">
+                        <md-progress-spinner v-if="loading" class="md-accent"
+                                             md-mode="indeterminate"></md-progress-spinner>
+                    </md-empty-state>
+                </template>
+                <md-empty-state v-else
+                                md-label="No messages"
+                                :md-description="`There are no messages yet, try to send something to ${smtpHost}:${ this.smtpPort }`">
+                </md-empty-state>
+            </template>
+            <template v-else>
+
+                <md-progress-bar class="md-accent" v-if="loadingMessage" md-mode="indeterminate"></md-progress-bar>
+                <md-content class="message-content" v-if="selected">
+                    <md-tabs md-alignment="left">
+                        <md-tab id="tab-home" md-label="HTML">
+                            <div v-html="selected.html"></div>
+                        </md-tab>
+                        <md-tab id="tab-pages" md-label="Text">
+                            <pre>{{ selected.text }}</pre>
+                        </md-tab>
+                        <md-tab id="tab-posts" md-label="Headers">
+                            <ul v-for="(value, propertyName) in selected.headers">
+                                <li><strong>{{ propertyName }}</strong>: {{ value }}</li>
+                            </ul>
+                        </md-tab>
+                    </md-tabs>
+                </md-content>
+            </template>
         </md-app-content>
 
     </md-app>
 
-    <md-dialog :md-active.sync="showSelected">
-        <md-dialog-title>Email content</md-dialog-title>
-        <md-dialog-content>
-
-            <md-tabs md-dynamic-height v-if="selected !== null">
-                <md-tab md-label="Html">
-                    <span class="md-body-2">{{ selected.subject }}</span>
-
-                    <div class="html-content">
-                        <span v-html="selected.html"></span>
-                    </div>
-                </md-tab>
-
-                <md-tab md-label="Text" v-if="selected !== null">
-                    <span class="md-body-2">{{ selected.subject }}</span>
-
-                    <pre>{{ selected.text }}</pre>
-                </md-tab>
-            </md-tabs>
-
-            <md-dialog-actions>
-                <md-button class="md-primary" @click="resetSelection">Close</md-button>
-            </md-dialog-actions>
-        </md-dialog-content>
-    </md-dialog>
 </div>
 {% endraw %}
 
@@ -110,7 +150,7 @@
 <script>
     var smtpHost = {{ smtp_host|tojson }};
     var smtpPort = {{ smtp_port|tojson }};
-    var messages = {{ messages|tojson }};
+    var messages = {{ messages|safe }};
     var develop = {{ develop|tojson }};
 
     Vue.use(VueMaterial.default);
@@ -123,49 +163,72 @@
                 smtpHost: window.smtpHost,
                 smtpPort: window.smtpPort,
                 selected: null,
-                showSelected: false,
                 isDeveloperMode: window.develop,
+                loading: true,
+                loadingMessage: false,
+                menuVisible: true
             }
         },
         methods: {
             loadMessages() {
                 var that = this;
+                this.loading = true;
 
                 fetch('/messages').then(function (response) {
                     var contentType = response.headers.get("content-type");
                     if (contentType && contentType.includes("application/json")) {
+                        that.loading = false;
                         return response.json();
                     }
+                    this.loading = false;
                     throw new TypeError("Invalid response:" + response);
                 })
                     .then(function (json) {
                         that.messages = that.transformLoadedMessages(json);
+                        that.loading = false;
                     })
                     .catch(function (error) {
                         console.log(error);
+                        that.loading = false;
                     });
+            },
+            toggleMenu() {
+                this.menuVisible = !this.menuVisible
             },
             refresh() {
                 this.loadMessages();
             },
-            sendTestEmail() {
-                // get :)
-                fetch('/send-test-email')
-            },
-            getBodyPreview(item) {
-                return item.clean_text.slice(0, 130) + '...';
-            },
-            onSelect(item) {
-                if (!item) {
+            onSelect(message) {
+                if (!message) {
                     return
                 }
 
-                this.selected = Object.assign({}, item);
-                this.showSelected = true;
+                this.loadingMessage = true;
+
+                fetch('/message?message-id=' + message.message_id).then(function (response) {
+                    var contentType = response.headers.get("content-type");
+                    if (contentType && contentType.includes("application/json")) {
+                        that.loadingMessage = false;
+                        return response.json();
+                    }
+                    this.loadingMessage = false;
+                    throw new TypeError("Invalid response:" + response);
+                })
+                    .then(function (json) {
+                        that.selected = Object.assign({}, json);
+                        that.loadingMessage = false;
+                        if (!that.isDesktop()) {
+                            that.toggleMenu();
+                        }
+                    })
+                    .catch(function (error) {
+                        console.log(error);
+                        that.loadingMessage = false;
+                    });
+
             },
             resetSelection() {
                 this.selected = null;
-                this.showSelected = false;
             },
             transformLoadedMessage(message) {
                 message.date = moment.utc(message.date);
@@ -179,15 +242,27 @@
                 }
                 return results;
             },
+            isDesktop() {
+                return (window.innerWidth >= 1279);
+            }
         },
         computed: {
             messagesCount() {
                 return this.messages.length;
+            },
+            orderedMessages() {
+                return this.messages.sort(function (a, b) {
+                    return a.date - b.date;
+                });
+            },
+            hasMessages() {
+                return this.messages.length > 0;
             }
         },
         mounted() {
             that = this;
             this.messages = this.transformLoadedMessages(window.messages);
+            this.loading = false;
 
             var socket = new WebSocket("ws://" + window.location.host + "/ws");
             socket.onclose = function (event) {

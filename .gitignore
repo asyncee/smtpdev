@@ -1,4 +1,5 @@
 .idea
+emails/
 
 # CMake
 cmake-build-*/
