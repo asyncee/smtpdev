@@ -6,7 +6,7 @@ from typing import MutableSet
 
 class MessageObserver(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def on_message(self, message: MaildirMessage):
+    def on_message(self, local_message_id: str, message: MaildirMessage):
         pass
 
 
@@ -17,6 +17,6 @@ class MessageObservable:
     def register(self, observer: MessageObserver):
         self._observers.add(observer)
 
-    def notify_observers(self, message: MaildirMessage) -> None:
+    def notify_observers(self, local_message_id: str, message: MaildirMessage) -> None:
         for observer in self._observers:
-            observer.on_message(message)
+            observer.on_message(local_message_id, message)

@@ -205,7 +205,7 @@
 
                 this.loadingMessage = true;
 
-                fetch('/message?message-id=' + message.message_id).then(function (response) {
+                fetch('/message?message-id=' + message.local_message_id).then(function (response) {
                     var contentType = response.headers.get("content-type");
                     if (contentType && contentType.includes("application/json")) {
                         that.loadingMessage = false;

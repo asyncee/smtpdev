@@ -6,16 +6,17 @@ from mailbox import Maildir
 from mailbox import MaildirMessage
 from pathlib import Path
 from typing import MutableSet
+from typing import Optional
 
 import aiohttp
 import aiohttp_jinja2
 import jinja2
 from aiohttp import web
-from mailparser import MailParser
 
 import smtpdev
 from . import schemas
-from .mailparser_util import MailParserUtil
+from .message import Message
+from .message_util import MessageUtil
 from ..config import Configuration
 from ..message_observer import MessageObserver
 
@@ -37,7 +38,7 @@ class WebServer(MessageObserver):
             "smtp_host": self._config.smtp_host,
             "smtp_port": self._config.smtp_port,
             "develop": self._config.develop,
-            "messages": MailParserUtil.to_json_many(self._get_messages(), schemas.MessageSchema),
+            "messages": MessageUtil.to_json_many(self._get_messages(), schemas.MessageSchema),
         }
 
     async def message_details(self, request):
@@ -47,11 +48,11 @@ class WebServer(MessageObserver):
             return web.json_response(
                 {"status": "error", "message": "message not found"}, status=404
             )
-        return web.json_response(MailParserUtil.to_dict(message, schemas.FullMessageSchema))
+        return web.json_response(MessageUtil.to_dict(message, schemas.FullMessageSchema))
 
     async def list_all_messages(self, request):
         messages = self._get_messages()
-        return web.json_response(MailParserUtil.to_dict_many(messages, schemas.MessageSchema))
+        return web.json_response(MessageUtil.to_dict_many(messages, schemas.MessageSchema))
 
     async def websocket_handler(self, request):
 
@@ -74,10 +75,10 @@ class WebServer(MessageObserver):
 
         return ws
 
-    def on_message(self, message: MaildirMessage):
+    def on_message(self, local_message_id: str, message: MaildirMessage):
         for ws in self._websockets:
-            mail = self._parse_message(message)
-            coro = ws.send_str(MailParserUtil.to_json(mail, schemas.MessageSchema))
+            mail = self._parse_message(local_message_id, message)
+            coro = ws.send_str(MessageUtil.to_json(mail, schemas.MessageSchema))
             asyncio.run_coroutine_threadsafe(coro, asyncio.get_running_loop())
 
     def _configure_webapp(self):
@@ -97,13 +98,15 @@ class WebServer(MessageObserver):
 
     def _get_messages(self):
         items = []
-        for message_id, message in self._maildir.items():
-            items.append(self._parse_message(message))
+        for local_message_id, message in self._maildir.items():
+            items.append(self._parse_message(local_message_id, message))
 
         return items
 
-    def _get_message(self, message_id: str):
-        return self._parse_message(self._maildir.get(message_id))
+    def _get_message(self, message_id: str) -> Optional[Message]:
+        for local_message_id, message in self._maildir.items():
+            if local_message_id == message_id:
+                return self._parse_message(local_message_id, self._maildir.get(message_id))
 
-    def _parse_message(self, message: MaildirMessage) -> MailParser:
-        return MailParserUtil.parse_message(message)
+    def _parse_message(self, local_message_id: str, message: MaildirMessage) -> Message:
+        return MessageUtil.parse_message(local_message_id, message)
