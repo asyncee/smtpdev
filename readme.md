@@ -14,6 +14,12 @@ pip install smtpdev
 
 You can launch smtpdev by issuing `smtpdev` command. All parameters have pre-set defaults.
 
+Also it is possible to use docker image:
+
+```
+docker pull asyncee/smtpdev
+```
+
 ## Command line options description
 
 ```
