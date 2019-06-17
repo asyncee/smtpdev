@@ -1,0 +1,20 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+*.egg-info/
+
+# pyenv
+.python-version
+
+# Environments
+.env
+env/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
