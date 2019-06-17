@@ -20,6 +20,12 @@ Also it is possible to use docker image:
 docker pull asyncee/smtpdev
 ```
 
+## Usage
+
+Launch server and navigate to `localhost:8080` using your favourite browser.
+
+Then send any email to `localhost:2500` to see it's html / text parts and headers.
+
 ## Command line options description
 
 ```
