@@ -89,7 +89,7 @@
             </md-toolbar>
 
             <md-list class="md-double-line md-dense message-list">
-                <template v-for="message in messages">
+                <template v-for="message in orderedMessages">
                     <md-list-item @click="onSelect(message)">
                         <div class="md-list-item-text">
                             <div class="sender">
