@@ -4,7 +4,7 @@ aiosmtpd==1.2
 async-timeout==3.0.1
 atpublic==1.0
 attrs==19.1.0
-bleach==3.1.2
+bleach==3.1.4
 chardet==3.0.4
 idna==2.8
 ipaddress==1.0.22
