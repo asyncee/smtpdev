@@ -33,7 +33,7 @@ for dirpath, dirnames, filenames in os.walk("smtpdev"):
 
 setup(
     name="smtpdev",
-    version="0.2.7",
+    version="0.2.8",
     packages=find_packages(),
     author="asyncee",
     description=description,
