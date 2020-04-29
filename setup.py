@@ -11,7 +11,6 @@ long_description = f"""
 
 See source code and documentation on {github_homepage}.
 """
-requirements = open(os.path.join(here, "requirements.txt")).readlines()
 
 
 data_files = []
@@ -54,7 +53,22 @@ setup(
     package_dir={"smtpdev": "smtpdev"},
     package_data={"smtpdev": data_files},
     zip_safe=False,
-    install_requires=requirements,
+    install_requires=[
+        "aiohttp==3.5.4",
+        "aiohttp-jinja2==1.1.1",
+        "aiosmtpd==1.2",
+        "async-timeout==3.0.1",
+        "atpublic==1.0",
+        "attrs==19.3.0",
+        "bleach==3.1.4",
+        "Jinja2==2.10.1",
+        "mail-parser==3.9.3",
+        "marshmallow==3.0.0rc6",
+        "multidict==4.5.2",
+        "simplejson==3.16.0",
+        "yarl==1.3.0",
+        "click==7.0",
+    ],
     entry_points="""
         [console_scripts]
         smtpdev=smtpdev.cli:main
