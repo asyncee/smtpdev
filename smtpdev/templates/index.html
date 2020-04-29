@@ -73,6 +73,7 @@
             </div>
             <div class="md-toolbar-section-end">
                 <md-button @click="refresh">Refresh</md-button>
+                <md-button @click="clearAll">Clear all</md-button>
             </div>
         </md-app-toolbar>
 
@@ -153,6 +154,23 @@
     var messages = {{ messages|safe }};
     var develop = {{ develop|tojson }};
 
+    async function postData(url = '', data = {}) {
+        // Default options are marked with *
+        const response = await fetch(url, {
+            method: 'POST', // *GET, POST, PUT, DELETE, etc.
+            mode: 'cors', // no-cors, *cors, same-origin
+            cache: 'no-cache', // *default, no-cache, reload, force-cache, only-if-cached
+            credentials: 'same-origin', // include, *same-origin, omit
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            redirect: 'follow', // manual, *follow, error
+            referrerPolicy: 'no-referrer', // no-referrer, *client
+            body: JSON.stringify(data) // body data type must match "Content-Type" header
+        });
+        return await response.json(); // parses JSON response into native JavaScript objects
+    }
+
     Vue.use(VueMaterial.default);
 
     new Vue({
@@ -188,7 +206,7 @@
                         that.loading = false;
                     })
                     .catch(function (error) {
-                        console.log(error);
+                        console.error(error);
                         that.loading = false;
                     });
             },
@@ -197,6 +215,14 @@
             },
             refresh() {
                 this.loadMessages();
+            },
+            clearAll() {
+                postData('/commands/clear_all', {})
+                    .then(() => window.location.reload())
+                    .catch(function (error) {
+                        console.error(error);
+                        this.selected = null;
+                    });
             },
             onSelect(message) {
                 if (!message) {
@@ -222,7 +248,7 @@
                         }
                     })
                     .catch(function (error) {
-                        console.log(error);
+                        console.error(error);
                         that.loadingMessage = false;
                     });
 

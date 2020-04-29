@@ -54,6 +54,10 @@ class WebServer(MessageObserver):
         messages = self._get_messages()
         return web.json_response(MessageUtil.to_dict_many(messages, schemas.MessageSchema))
 
+    async def clear_all_messages(self, request):
+        self._maildir.clear()
+        return web.json_response({})
+
     async def websocket_handler(self, request):
 
         ws = web.WebSocketResponse()
@@ -91,6 +95,7 @@ class WebServer(MessageObserver):
             web.get("/message", self.message_details),
             web.get("/messages", self.list_all_messages),
             web.get("/ws", self.websocket_handler),
+            web.post("/commands/clear_all", self.clear_all_messages),
             web.static("/static", static_path),
         ]
         app.add_routes(routes)
