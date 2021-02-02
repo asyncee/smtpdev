@@ -58,7 +58,7 @@ setup(
         "aiohttp-jinja2==1.2.0",
         "aiosmtpd==1.2",
         "attrs==19.3.0",
-        "bleach==3.1.4",
+        "bleach==3.3.0",
         "Jinja2==2.11.2",
         "mail-parser==3.12.0",
         "marshmallow==3.5.1",
