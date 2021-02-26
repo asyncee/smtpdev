@@ -54,7 +54,7 @@ setup(
     package_data={"smtpdev": data_files},
     zip_safe=False,
     install_requires=[
-        "aiohttp==3.6.2",
+        "aiohttp==3.7.4",
         "aiohttp-jinja2==1.2.0",
         "aiosmtpd==1.2",
         "attrs==19.3.0",
