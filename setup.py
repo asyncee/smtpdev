@@ -59,7 +59,7 @@ setup(
         "aiosmtpd==1.2",
         "attrs==19.3.0",
         "bleach==3.1.4",
-        "Jinja2==2.11.2",
+        "Jinja2==2.11.3",
         "mail-parser==3.12.0",
         "marshmallow==3.5.1",
         "simplejson==3.17.0",
